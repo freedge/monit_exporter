@@ -31,6 +31,6 @@ steps:
     tagSource: manual
     tag: v$(major).$(minor).$(revision)
     gitHubConnection: github.com_freedge
-    repositoryName: freedge/monit_explorer
+    repositoryName: freedge/monit_exporter
     assets: |
       $(Build.ArtifactStagingDirectory)/*
