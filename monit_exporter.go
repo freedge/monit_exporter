@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/log"
 	"github.com/spf13/viper"
 	"golang.org/x/net/html/charset"
@@ -52,8 +53,10 @@ type Exporter struct {
 	mutex  sync.RWMutex
 	client *http.Client
 
-	up          prometheus.Gauge
-	checkStatus *prometheus.GaugeVec
+	up                   prometheus.Gauge
+	checkStatus          *prometheus.GaugeVec
+	connectedUsersUptime *prometheus.GaugeVec // CounterVec one day?
+	connectedUsersCount  prometheus.Gauge
 }
 
 type Config struct {
@@ -63,6 +66,7 @@ type Config struct {
 	monit_scrape_uri string
 	monit_user       string
 	monit_password   string
+	ejabberd_uri     string
 }
 
 func FetchMonitStatus(c *Config) ([]byte, error) {
@@ -114,6 +118,7 @@ func ParseConfig() *Config {
 	v.SetDefault("monit_scrape_uri", "http://localhost:2812/_status?format=xml&level=full")
 	v.SetDefault("monit_user", "")
 	v.SetDefault("monit_password", "")
+	v.SetDefault("ejabberd_uri", "localhost:5280")
 	v.SetConfigFile(*configFile)
 	v.SetConfigType("toml")
 	err := v.ReadInConfig() // Find and read the config file
@@ -128,6 +133,7 @@ func ParseConfig() *Config {
 		monit_scrape_uri: v.GetString("monit_scrape_uri"),
 		monit_user:       v.GetString("monit_user"),
 		monit_password:   v.GetString("monit_password"),
+		ejabberd_uri:     v.GetString("ejabberd_uri"),
 	}
 }
 
@@ -148,6 +154,17 @@ func NewExporter(c *Config) (*Exporter, error) {
 		},
 			[]string{"check_name", "type", "monitored"},
 		),
+		connectedUsersUptime: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "ejabberd_connected_users_uptime",
+			Help:      "Ejabberd connected users uptime",
+		},
+			[]string{"jid"}),
+		connectedUsersCount: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "ejabberd_users",
+			Help:      "Ejabberd total users count",
+		}),
 	}, nil
 }
 
@@ -156,6 +173,8 @@ func NewExporter(c *Config) (*Exporter, error) {
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	e.up.Describe(ch)
 	e.checkStatus.Describe(ch)
+	e.connectedUsersCount.Describe(ch)
+	e.connectedUsersUptime.Describe(ch)
 }
 
 func (e *Exporter) scrape() error {
@@ -166,21 +185,31 @@ func (e *Exporter) scrape() error {
 		e.checkStatus.Reset()
 		log.Errorf("Error getting monit status: %v", err)
 		return err
-	} else {
-		parsedData, err := ParseMonitStatus(data)
-		if err != nil {
-			e.up.Set(0)
-			e.checkStatus.Reset()
-			log.Errorf("Error parsing data from monit: %v", err)
-		} else {
-			e.up.Set(1)
-			// Constructing metrics
-			for _, service := range parsedData.MonitServices {
-				e.checkStatus.With(prometheus.Labels{"check_name": service.Name, "type": serviceTypes[service.Type], "monitored": service.Monitored}).Set(float64(service.Status))
-			}
-		}
+	}
+	parsedData, err := ParseMonitStatus(data)
+	if err != nil {
+		e.up.Set(0)
+		e.checkStatus.Reset()
+		log.Errorf("Error parsing data from monit: %v", err)
 		return err
 	}
+
+	e.up.Set(1)
+	// Constructing metrics
+	for _, service := range parsedData.MonitServices {
+		e.checkStatus.With(prometheus.Labels{"check_name": service.Name, "type": serviceTypes[service.Type], "monitored": service.Monitored}).Set(float64(service.Status))
+	}
+
+	jabberData, err := FetchAndParseEjabberdStatus(e.config)
+	if err != nil {
+		return err
+	}
+	for _, user := range jabberData {
+		e.connectedUsersUptime.With(prometheus.Labels{"jid": user.jid}).Set(float64(user.uptime))
+	}
+	e.connectedUsersCount.Set(float64(len(jabberData)))
+
+	return nil
 }
 
 // Collect fetches the stats from configured monit location and delivers them
@@ -192,6 +221,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.scrape()
 	e.up.Collect(ch)
 	e.checkStatus.Collect(ch)
+	e.connectedUsersCount.Collect(ch)
+	e.connectedUsersUptime.Collect(ch)
 	return
 }
 
@@ -206,7 +237,7 @@ func main() {
 	prometheus.MustRegister(exporter)
 
 	log.Printf("Starting monit_exporter: %s", config.listen_address)
-	http.Handle(config.metrics_path, prometheus.Handler())
+	http.Handle(config.metrics_path, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
             <head><title>Monit Exporter</title></head>

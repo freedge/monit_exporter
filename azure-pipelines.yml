@@ -1,0 +1,39 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+variables:
+  buildPlatform: 'x64'
+  buildConfiguration: 'release'
+  major: 1
+  minor: 0
+  revision: $[counter('rev', 0)]
+
+steps: 
+- task: GoTool@0
+  inputs:
+    version: '1.13.5'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-d'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'build'
+    arguments: '-o $(Build.ArtifactStagingDirectory)\monit_exporter'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: PublishBuildArtifacts@1
+  inputs:
+     artifactName: drop
+- task: GithubRelease@0
+  displayName: 'Create GitHub Release'   
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/master'))
+  inputs:
+    tagSource: manual
+    tag: v$(major).$(minor).$(revision)
+    gitHubConnection: github.com_freedge
+    repositoryName: freedge/monit_explorer
+    assets: |
+      $(Build.ArtifactStagingDirectory)/*
