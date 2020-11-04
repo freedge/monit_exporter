@@ -13,7 +13,7 @@ variables:
 steps: 
 - task: GoTool@0
   inputs:
-    version: '1.13.5'
+    version: '1.15.3'
 - task: Go@0
   inputs:
     command: 'get'
