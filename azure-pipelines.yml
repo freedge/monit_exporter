@@ -19,13 +19,16 @@ steps:
     command: 'get'
     arguments: '-d'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
+- script: |
+    mkdir -p $(Build.ArtifactStagingDirectory)/monit_exporter-$(major).$(minor).$(revision).linux-amd64
+  displayName: build directory
 - task: Go@0
   inputs:
     command: 'build'
-    arguments: '-o $(Build.ArtifactStagingDirectory)/monit_exporter'
+    arguments: '-o $(Build.ArtifactStagingDirectory)/monit_exporter-$(major).$(minor).$(revision).linux-amd64/monit_exporter'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
 - script: |
-    gzip $(Build.ArtifactStagingDirectory)/monit_exporter
+    tar  --remove-files -C $(Build.ArtifactStagingDirectory) -zcf $(Build.ArtifactStagingDirectory)/monit_exporter-$(major).$(minor).$(revision).linux-amd64.tar.gz --format=posix  --owner=nobody --group nobody monit_exporter-$(major).$(minor).$(revision).linux-amd64
   displayName: package
 - task: GithubRelease@0
   displayName: 'Create GitHub Release'   
@@ -36,4 +39,4 @@ steps:
     gitHubConnection: github.com_freedge
     repositoryName: freedge/monit_exporter
     assets: |
-      $(Build.ArtifactStagingDirectory)/*
+      $(Build.ArtifactStagingDirectory)/*.tar.gz
