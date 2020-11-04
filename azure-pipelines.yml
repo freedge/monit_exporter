@@ -24,6 +24,9 @@ steps:
     command: 'build'
     arguments: '-o $(Build.ArtifactStagingDirectory)/monit_exporter'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
+- script: |
+    gzip $(Build.ArtifactStagingDirectory)/monit_exporter
+  displayName: package
 - task: GithubRelease@0
   displayName: 'Create GitHub Release'   
   condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/master'))

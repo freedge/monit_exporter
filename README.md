@@ -1,3 +1,11 @@
+# My own patches
+
+Turns out we have some ejabberd monitoring to do as well so let's just go ahead and put it there.
+
+
+[![Build Status](https://dev.azure.com/freedge/freedge/_apis/build/status/freedge.monit_exporter?branchName=master)](https://dev.azure.com/freedge/freedge/_build/latest?definitionId=9&branchName=master)
+
+
 # Monit Exporter for Prometheus
 
 Simple server that periodically scrapes monit status and exports checks information via HTTP for Prometheus.
@@ -27,7 +35,3 @@ Parameter | Description | Default
 `monit_scrape_uri` | uri to get monit status | http://localhost:2812/_status?format=xml&level=full
 `monit_user` | user for monit basic auth, if needed | none
 `monit_password` | password for monit status, if needed | none
-
-## My own patches
-
-Turns out we have some ejabberd monitoring to do as well so let's just go ahead and put it there.
