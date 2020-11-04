@@ -22,11 +22,8 @@ steps:
 - task: Go@0
   inputs:
     command: 'build'
-    arguments: '-o $(Build.ArtifactStagingDirectory)\monit_exporter'
+    arguments: '-o $(Build.ArtifactStagingDirectory)/monit_exporter'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
-- task: PublishBuildArtifacts@1
-  inputs:
-     artifactName: drop
 - task: GithubRelease@0
   displayName: 'Create GitHub Release'   
   condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/master'))

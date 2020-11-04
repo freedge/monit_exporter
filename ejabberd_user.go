@@ -11,13 +11,13 @@ import (
 
 // EjabberdConnectedUserInfo is an item of the list retured by the /api/connected_users_info service
 type EjabberdConnectedUserInfo struct {
-	jid        string
-	connection string
-	ip         string
-	port       int
-	priority   int
-	node       string
-	uptime     int
+	Jid        string
+	Connection string
+	Ip         string
+	Port       int
+	Priority   int
+	Node       string
+	Uptime     int
 }
 
 // FetchAndParseEjabberdStatus return the list of connected users from Jabber

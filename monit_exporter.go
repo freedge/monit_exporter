@@ -118,7 +118,7 @@ func ParseConfig() *Config {
 	v.SetDefault("monit_scrape_uri", "http://localhost:2812/_status?format=xml&level=full")
 	v.SetDefault("monit_user", "")
 	v.SetDefault("monit_password", "")
-	v.SetDefault("ejabberd_uri", "localhost:5280")
+	v.SetDefault("ejabberd_uri", "http://localhost:5280")
 	v.SetConfigFile(*configFile)
 	v.SetConfigType("toml")
 	err := v.ReadInConfig() // Find and read the config file
@@ -205,7 +205,7 @@ func (e *Exporter) scrape() error {
 		return err
 	}
 	for _, user := range jabberData {
-		e.connectedUsersUptime.With(prometheus.Labels{"jid": user.jid}).Set(float64(user.uptime))
+		e.connectedUsersUptime.With(prometheus.Labels{"jid": user.Jid}).Set(float64(user.Uptime))
 	}
 	e.connectedUsersCount.Set(float64(len(jabberData)))
 
