@@ -9,9 +9,10 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/prometheus/common/log"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/log"
 	"github.com/spf13/viper"
 	"golang.org/x/net/html/charset"
 )
@@ -123,7 +124,7 @@ func ParseConfig() *Config {
 	v.SetConfigType("toml")
 	err := v.ReadInConfig() // Find and read the config file
 	if err != nil {         // Handle errors reading the config file
-		log.Printf("Error reading config file: %s. Using defaults.", err)
+		log.Infof("Error reading config file: %s. Using defaults.", err)
 	}
 
 	return &Config{
@@ -236,7 +237,7 @@ func main() {
 	}
 	prometheus.MustRegister(exporter)
 
-	log.Printf("Starting monit_exporter: %s", config.listen_address)
+	log.Infof("Starting monit_exporter: %s", config.listen_address)
 	http.Handle(config.metrics_path, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>

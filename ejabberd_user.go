@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/prometheus/log"
+	"github.com/prometheus/common/log"
 )
 
 // EjabberdConnectedUserInfo is an item of the list retured by the /api/connected_users_info service
@@ -33,6 +33,7 @@ func FetchAndParseEjabberdStatus(c *Config) ([]EjabberdConnectedUserInfo, error)
 		log.Error("Unable to fetch ejabberd status")
 		return nil, err
 	}
+	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal("Unable to read ejabberd status")
